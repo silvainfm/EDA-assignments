@@ -33,6 +33,7 @@ library(dplyr)
 library(tidyr)
 library(readr)
 library(stringr)
+library(forcats)
 ```
 
 ### Data Exploration
@@ -42,12 +43,12 @@ The Storms Events dataset includes information on the type of storm, storm sever
 ```{r}
 # storm event data
 # recommendation on reading the data in:
-storms <- read_csv("StormEvents_details-ftp_v1.0_d2020_c20220816.csv", 
-    col_types = cols(BEGIN_YEARMONTH = col_date(format = "%Y%m"), 
-        BEGIN_DAY = col_integer(), 
-        END_YEARMONTH = col_date(format = "%Y%m"), 
-        END_DAY = col_integer(), 
-        EPISODE_ID = col_character(), 
+file.link <- "https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/StormEvents_details-ftp_v1.0_d2020_c20220816.csv.gz"
+storms <- read_csv(file = file.link, col_types = cols(BEGIN_YEARMONTH = col_date(format = "%Y%m"),
+        BEGIN_DAY = col_integer(),
+        END_YEARMONTH = col_date(format = "%Y%m"),
+        END_DAY = col_integer(),
+        EPISODE_ID = col_character(),
         DAMAGE_PROPERTY = col_number(),
         DAMAGE_CROPS = col_number(),
         EVENT_ID = col_character()))
@@ -56,40 +57,58 @@ head(storms)
 ```
 
 1. First, create a bar plot that shows the deadliest types of storms (the event types with the most direct/indirect deaths - note that there are two columns for deaths information). Which storm has the most deaths associated with it? 
+```{r}
+storms$deaths_total <- storms$DEATHS_DIRECT + storms$DEATHS_INDIRECT
+storms1 <-filter(storms, deaths_total>0) %>% 
+  arrange(desc(-deaths_total))
+
+storms1 %>%
+  group_by(EVENT_TYPE) %>%
+  summarise(total_deaths = sum(deaths_total)) %>%
+  arrange(total_deaths) %>%
+  mutate(EVENT_TYPE = fct_reorder(EVENT_TYPE, total_deaths)) %>%
+  ggplot() + geom_col( aes(x=total_deaths, y=EVENT_TYPE), fill="steelblue") 
+
+```
 
 2. What conclusions can you draw from this plot? How might it be misleading?
-
-```{r}
-
-  
-```
+The graph has too many storms showing, especially had I included the ones with 0 deaths. Excessive heat is the deadliest storm type, heat the second one. It might also be misleading because of the types that are close in nature like heat and excessive heat. Including an age_group column could make it less misleading. 
 
 Storms can cause injuries, too. Let's see what the most harmful storms are by calculating the storm types with the most injuries *and* deaths associated with them. 
 
 3. Which storms are the most harmful? Make a plot of the most "Most Harmful Storm Types in 2020." Include appropriate labels.
 
 ```{r}
+storms$injuries_total <- storms$INJURIES_DIRECT + storms$INJURIES_INDIRECT
+storms$harm <- storms$injuries_total + storms$deaths_total
+stormsh <- filter(storms, harm>2)
 
-
+stormsh %>%
+  group_by(EVENT_TYPE) %>%
+  summarise(total_harm = sum(harm)) %>%
+  arrange(total_harm) %>%
+  mutate(EVENT_TYPE = fct_reorder(EVENT_TYPE, total_harm)) %>%
+  ggplot(aes(x=total_harm, y=EVENT_TYPE)) + geom_bar(stat="identity", fill="steelblue") + labs(
+            title="Most Harmful Storm Types in 2020", 
+            y="Storm type", 
+            size="deaths_total", 
+            x="Number of deaths and Injuries")
 
 ```
 
 4. How is this plot similar or different to the one you created first? What conclusions can you draw from these two plots? How might this plot be misleading? Use *complete* sentences.
-
+This one shows that tornadoes are the most harmful, compared to excessive heat in the last plot. From these to 2 plots, we can conclude that 
+It is misleading because it doesn't differentiate between death and injuries. In the dataset, we do not know what is considered an injury, if it was for example just a scratch or something more substantial. The number of days in hospital post event could an interesting column to add.
 
 Each year, NOAA publishes a Billion-Dollar Disasters report, which details the numbers and locations of natural disasters in the US with damage and costs exceeding $1 billion. You can read more about the Billion-Dollar Disasters here: https://www.ncei.noaa.gov/access/billions/
 
-5. Our Storm Events dataset has the damage costs in thousands of dollars associated with each storm event. Which event types are the costliest (note: there are two columns for damage costs)?
+#5. Our Storm Events dataset has the damage costs in thousands of dollars associated with each storm event. Which event types are the costliest (note: there are two columns for damage costs)?
 
-6. How could this graphic be misleading? Are there other costs associated with storms besides property and crop damage? 
+#6. How could this graphic be misleading? Are there other costs associated with storms besides property and crop damage? 
 
-7. What could you conclude based on all three of the graphics you have created?
+7. What could you conclude based on all 2 of the graphics you have created?
+see number 4
 
-```{r}
-
-
-
-```
 
 #### Your Turn
 
@@ -97,10 +116,26 @@ What else could you visualize with this dataset? Ask a new question about the da
 
 ```{r}
 # plot
-ggplot() 
+# Deaths by state and event
+storms %>%
+  filter(harm>2) %>%
+  group_by(STATE) %>%
+  summarise(total_harm = sum(harm)) %>%
+  arrange(total_harm) %>%
+  mutate(STATE = fct_reorder(STATE, total_harm)) %>%
+  ggplot(aes(x=total_harm, y=STATE)) + geom_bar(stat="identity", fill="steelblue") + labs(
+            title="Most Deaths by State", 
+            y="States", 
+            size="total_harm", 
+            x="Number of deaths and Injuries")
+ 
 ```
 
 
 ### Extra / Bonus
 
 You might remember the March 2020 tornado that caused a lot of damage in the Nashville area. Can you find this storm in the dataset? What other information can you find about this event from the data?
+```{r}
+filter(storms, YEAR == 2020 & MONTH_NAME == "March" & STATE == "TENNESSEE" & EVENT_TYPE == "Tornado" & (CZ_NAME == "DAVIDSON" | CZ_NAME == "DICKSON" | CZ_NAME == "MONTGOMERY"))
+
+```
