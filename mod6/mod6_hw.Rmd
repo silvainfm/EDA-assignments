@@ -7,42 +7,85 @@ output: github_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-
-
-# what libraries do you think you'll need?
-# probably tidyverse and naniar
+# libraries needed
+library(tidyverse)
+library(naniar)
+library(VIM)
+library(ggplot2)
 ```
 
 Imagine we have a study of 1000 people. Everyone recruited in our study were college level power lifter in their 20s (an apparently popular sport I know!). They voluntarily enrolled in the study because the goal of the study is to help athletes change from one sport to another in their 30s. Specifically, this study has a control group and a treatment group. The control group receives no treatment. The treatment group is given a special workout that is suppose to help them loose a bit of muscle mass because now instead of being power lifters, they want to be elite runners! 
 Load the data. 
 
 ```{r}
+# load data and delete 1st col
 workout_data <- read_csv("workout_data.csv")
+workout_data <- subset(workout_data, select = -c(...1) )
+
+matrixplot(workout_data, sortby = 1)
+vis_miss(workout_data, sort_miss = TRUE)
+
+res<-summary(aggr(workout_data, sortVar=TRUE, prop= TRUE))$combinations 
+head(res[rev(order(res[,2])),])
 ```
 
 1. Inspect the data. Write 2-3 sentences describing the data. 
+```{r}
+dim(workout_data)
+str(workout_data)
+summary(workout_data)
+```
+
+The data has 10000 rows and 11 columns, one of which just numbers each row, only 2 of the columns are not number columns. The rest of the columns are id, age, day, week, cond, base, y, weight_1, weight_2, weight_3. Finally, only weight 1, 2 and 3 contain NAs, and all 3 have the same minimum, 1st quantile, and median. 
 
 2. You see that there are three weight variables. Let's imagine that the researchers invented three separate ways to measure weight. The researchers are happy--all three measurements report very similar measures! Yet, we have different missing data for each. Inspect and report the % missingness for each weight variable.
+```{r} 
+gg_miss_var(workout_data, show_pct = TRUE) + 
+  scale_y_continuous(labels = scales::percent_format(scale = 1),
+                     limits = c(0, 20))
+pct_miss(workout_data$weight_1)
+pct_miss(workout_data$weight_2)
+pct_miss(workout_data$weight_3)
+```
+Weight_1 is missing 5% of values, weight_2 6.77% of values, and weigth_3 6.97% of values. 
 
 3. Next, assess the *patterns* of missingness of each of the weight variables. Do you think `weight_1` is MCAR, MAR or MNAR? Use your best coding evidence to support these claims.
+```{r} 
+summary(workout_data$weight_1)
+matrixplot(workout_data, sortby = "weight_1")
+gg_miss_var(workout_data, day, show_pct = TRUE) + 
+  scale_y_continuous(labels = scales::percent_format(scale = 1),
+                     limits = c(0, 20))
+```
+
+Weight_1 is MAR, we can see that a pattern arises driven by day that seems to determine missingness.
 
 4. Is weight_2 MCAR, MAR or MNAR? Use your best coding evidence to support these claims.
+```{r} 
+summary(workout_data$weight_2)
+matrixplot(workout_data, sortby = "weight_2")
+```
+As we can see in the matrix plot, there is no discernible pattern, Weight_2 is MCAR, missing completely at random
 
 5. Is weight_3 MCAR, MAR or MNAR? Use your best coding evidence to support these claims.
+```{r} 
+summary(workout_data$weight_3)
+matrixplot(workout_data, sortby = "weight_3")
+```
+As we can see in the matrix plot, weight_3 is MNAR, the weight of those surveyed are not showing up when their weight gets above 266, it looks like this could be the pattern.
 
 RECALL: (See slides for more info)
 
 *Missing Completely at Random (MCAR)*
 
-- MCAR occurs when there is a  probability that data will be missing, and that probability is unrelated to anything else in your study. We tend to think of this as 'truly random' missingness. 
+- MCAR occurs when there is a probability that data will be missing, and that probability is unrelated to anything else in your study. We tend to think of this as 'truly random' missingness. 
 
 *Missing at Random (MAR)*
 
-- MAR happens when the missingness is related to information in your study, and all or some of the relevant information to predict missingness is in the existing dataset. I.e., we can figure out a reason/pattern why the missingness is happening using the data itself.  
+- MAR happens when the missingness is related to information in your study, and all or some of the relevant information to predict missingness is in the existing dataset. I.e., we can figure out a reason/pattern why the missingness is happening using the data itself. 
 
 *Missing Not at Random (MNAR)*
 
 - NMAR is like MAR in that the missingness is related to what is happening in the study/data but differs in that the data that are related to the missingness included in the data that are missing. I.e., we don't really know why they are missing and/or do not have data that seems to help us figure this out!
 
 To start, we typically we can investigate missingness in our data by assessing if missingness is MCAR or MAR. If it is not either of these, it is likely MNAR.
-
