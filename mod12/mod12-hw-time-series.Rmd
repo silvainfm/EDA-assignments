@@ -2,12 +2,7 @@
 title: "Mod 12: Time Series Data"
 professor: "Dr. Cassy Dorff"
 output:
-  html_document:
-    keep_md: true
-urlcolor: blue
-subtitle: DSI-Explore
-editor_options: 
-  chunk_output_type: console
+  github_document
 ---
 
 ## Introduction
@@ -84,22 +79,33 @@ Go ahead and make a plot to compare the GDP per capita development of the BRICS 
 On your own please create a publication-ready graph that can be printed using grayscale. Keep in mind you should distinguish the different lines easily from one another.
 
 ```{r, warning = F, fig.height = 2, fig.width = 5, echo = TRUE, message = F}
+g1 = ggplot(subset(df, country %in% c("Brazil", "Russia", "China", "India", "China", "South Africa")),
+       aes(x = year,
+           y = gdpPercap)) +
+  geom_line(aes(color=country), alpha = 0.5) +
+  geom_point(alpha = 0.8,
+             size = 0.4) +
+  theme_light() +
+  labs(title = "GDP per capita of the BRICS",
+       x = "Year",
+       y = "GDP per capita") +
+  scale_x_continuous(breaks = seq(1950,2000, 25)) + 
+  guides(color = guide_legend(title= 'Country'))
 
-
-
-
+g1
 ```
 
 In cases like this, we might want to facet the plot by a single variable, using `facet_wrap()`. The first argument of `facet_wrap()` should be a formula, which you create with `~` followed by a variable name (here "formula" is the name of a data structure in R, not a synonym for "equation"). The variable that you pass to `facet_wrap()` should be discrete. Below, we can use facet wrap ~ country to inspect trends across groupings.
 
 
 ```{r, warning = F, fig.height = 2, fig.width = 7, echo = TRUE, message = F}
-
-
+g1 + facet_wrap(country~.)
 
 ```
 
 Which plot do you like better? Facet wrap, or everything on the same graph? What are the pros and cons?
+
+**Everything on the same graph is better as you can compare each country, but the graph looks a little busy. 4 different ones makes it small and makes the image seem very busy/overcrowded, also it makes it seem like India and South Africa are complementing each other.The facet wrap makes sense when the 4 variables differ largely.**
 
 *Practice 2 - HW on your own*
 We may also want to look at how population in BRICS countries changed over time. Try to produce a similar graph for population but use `facet_grid()` instead of `facet_wrap()`. You might want to check the help file for `facet_grid()` because there is a tiny difference between the two. 
@@ -125,6 +131,8 @@ ggplot(subset(df, country %in% c("Brazil", "Russia", "China", "India", "South Af
 
 
 ```
+
+**I think that facet wrap works much better than facet grid in this case. It is difficult to compare the plots, as they are split and have the same scales.**
 
 ### Spaghetti plots
 
@@ -161,6 +169,7 @@ ggplot(subset(df, !(country %in% brics)), aes(x = year,y = lifeExp, group = coun
   scale_color_brewer(palette = "RdYlBu") 
 
 ```
+**Scale color brewer applies the color palette specified in the parameters to the aesthetic specified in the color arg - that's how it knows where to apply color.**
 
 In the plot below, we will use a log transformation on GDP per capita within the `scale_color_gradient()` function to display GDP per capita values on their original scale but map the color of the lines to the natural log of GDP per capita. Why is it useful to apply a log transformation here?  Use of log makes the non-linear growth function linear and more interpretable over time. We often do this with many time series variables  because many time series variables have overall trends of exponential growth.
 
@@ -221,6 +230,7 @@ start(eu_stocks)
 end(eu_stocks)
 frequency(eu_stocks)
 ```
+**It is how often the sample is taken per unit of time.**
 
 We can tell from using the time-series function that this data is already a time-series object. The `ts()` function will convert a numeric vector into an R time series object. The format is `ts(vector, start=, end=, frequency=)` where `start` and `end` are the times of the first and last observation and frequency is the number of observations per unit time (1=annual, 4=quartly, 12=monthly, etc.).
 
@@ -278,6 +288,7 @@ autoplot(eu_stocks)
 # mean over time
 plot(aggregate(eu_stocks,FUN=mean))
 ```
+**The mean over time does not seem constant, this implies that the time series is not stationary.**
 
 The mean values increase over time. We can see from this plot and the others that this data has an important time component. One way to investigate the role of time, early on, is to examine autocorrelation across different lags. 
 
